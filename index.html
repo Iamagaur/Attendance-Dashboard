@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Dashboard — KARIKA INDIA | THE SHOP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cp-bg:#EAF3DE;--cp-t:#3B6D11;
+  --ca-bg:#FCEBEB;--ca-t:#A32D2D;
+  --cl-bg:#FAEEDA;--cl-t:#854F0B;
+  --co-bg:#E6F1FB;--co-t:#0C447C;
+  --ch-bg:#EEEDFE;--ch-t:#3C3489;
+  --cw-bg:#F1EFE8;--cw-t:#5F5E5A;
+  --cv-bg:#E1F5EE;--cv-t:#085041;
+  --page:#F8F8F6;--card:#FFFFFF;
+  --border:rgba(0,0,0,0.09);
+  --t1:#1A1A1A;--t2:#6B6B68;
+  --accent:#2563EB;
+}
+body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--page);color:var(--t1);min-height:100vh}
+
+/* ── VIEWS ── */
+.view{display:none}
+.view.active{display:block}
+#view-upload.active{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+
+/* ── UPLOAD ── */
+.upload-card{background:var(--card);border:0.5px solid var(--border);border-radius:16px;padding:40px;max-width:540px;width:100%;text-align:center;box-shadow:0 4px 32px rgba(0,0,0,0.07)}
+.brand-logo{width:52px;height:52px;border-radius:14px;background:var(--accent);color:#fff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.upload-card h1{font-size:20px;font-weight:700;margin-bottom:3px}
+.upload-card .sub{font-size:12px;color:var(--t2);margin-bottom:28px}
+.drop-zone{border:2px dashed rgba(0,0,0,0.13);border-radius:12px;padding:36px 20px;cursor:pointer;transition:.2s;margin-bottom:20px}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:#EFF6FF}
+.drop-icon{font-size:36px;margin-bottom:10px}
+.drop-zone p{font-size:14px;font-weight:500;margin-bottom:3px}
+.drop-zone small{color:var(--t2);font-size:12px}
+#fileInput{display:none}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:.15s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#1D4ED8}
+.btn-outline{background:transparent;border:0.5px solid var(--border);color:var(--t1)}
+.btn-outline:hover{background:#F5F5F3}
+.btn-danger{background:var(--ca-bg);color:var(--ca-t);border:0.5px solid var(--ca-t)20}
+.helpers{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.helper-box{background:var(--page);border:0.5px solid var(--border);border-radius:8px;padding:10px 14px;text-align:left}
+.helper-box label{font-size:10px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px}
+.helper-box select,.helper-box input{font-family:inherit;font-size:13px;width:100%;border:none;background:transparent;color:var(--t1);outline:none}
+.privacy{font-size:11px;color:var(--t2);display:flex;align-items:center;justify-content:center;gap:5px;margin-top:10px}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--card);border-bottom:0.5px solid var(--border);padding:11px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.topbar-brand h1{font-size:14px;font-weight:700;line-height:1.2}
+.topbar-brand p{font-size:11px;color:var(--t2)}
+.topbar-controls{display:flex;align-items:center;gap:9px;flex:1;flex-wrap:wrap}
+.topbar-controls select,.topbar-controls input[type=text]{font-family:inherit;font-size:13px;padding:6px 11px;border:0.5px solid var(--border);border-radius:6px;background:var(--card);color:var(--t1);outline:none}
+.topbar-controls select:focus,.topbar-controls input:focus{border-color:var(--accent)}
+#searchInput{min-width:190px}
+.toggle-btn{padding:6px 13px;border:0.5px solid var(--border);border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;background:var(--card);color:var(--t2);font-family:inherit;transition:.15s}
+.toggle-btn.active{background:var(--ca-bg);border-color:var(--ca-t);color:var(--ca-t)}
+.topbar-actions{display:flex;gap:7px;flex-shrink:0}
+
+/* ── DASHBOARD BODY ── */
+.dash-body{max-width:1300px;margin:0 auto;padding:20px 24px;display:grid;grid-template-columns:1fr 360px;gap:18px}
+.dash-main{min-width:0}
+.dash-side{min-width:0}
+
+/* ── METRIC CARDS ── */
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.metric-card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:16px 18px;border-left:3px solid transparent}
+.metric-card.green{border-left-color:var(--cp-t)}
+.metric-card.red{border-left-color:var(--ca-t)}
+.metric-card.amber{border-left-color:var(--cl-t)}
+.metric-card.blue{border-left-color:var(--co-t)}
+.metric-num{font-size:26px;font-weight:700;line-height:1;margin-bottom:3px}
+.metric-lbl{font-size:11px;color:var(--t2)}
+
+/* ── TABLE CARD ── */
+.card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;overflow:hidden}
+.card-head{padding:13px 18px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-head h2{font-size:13px;font-weight:600}
+.card-head .cnt{font-size:11px;color:var(--t2)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{padding:9px 14px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--t2);border-bottom:0.5px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none;background:var(--page)}
+thead th:hover{background:#EFEFED}
+tbody tr{border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#F5F5F3}
+tbody td{padding:9px 14px;vertical-align:middle}
+.emp-name{font-weight:500;font-size:13px}
+.emp-sub{font-size:11px;color:var(--t2);margin-top:1px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600}
+.badge-good{background:var(--cp-bg);color:var(--cp-t)}
+.badge-watch{background:var(--cl-bg);color:var(--cl-t)}
+.badge-alert{background:var(--ca-bg);color:var(--ca-t)}
+
+/* ── SIDE PANELS ── */
+.side-card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px}
+.side-head{padding:11px 15px;border-bottom:0.5px solid var(--border);font-size:13px;font-weight:600}
+.side-body{padding:14px}
+.chart-wrap{position:relative}
+
+/* ── ALERTS ── */
+.alert-item{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:0.5px solid var(--border)}
+.alert-item:last-child{border-bottom:none}
+.adot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.adot.danger{background:var(--ca-t)}
+.adot.warning{background:var(--cl-t)}
+.adot.info{background:var(--co-t)}
+.amsg{font-size:12px;font-weight:500}
+.anames{font-size:11px;color:var(--t2);margin-top:1px}
+
+/* ── DETAIL PANEL ── */
+#view-detail{position:fixed;inset:0;z-index:200;display:none}
+#view-detail.open{display:flex}
+.backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.22);backdrop-filter:blur(2px)}
+.detail-panel{position:absolute;right:0;top:0;bottom:0;width:700px;max-width:100vw;background:var(--card);overflow-y:auto;box-shadow:-6px 0 40px rgba(0,0,0,0.12);transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+#view-detail.open .detail-panel{transform:translateX(0)}
+.dpanel-head{padding:18px 22px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:14px;position:sticky;top:0;background:var(--card);z-index:10}
+.avatar{width:46px;height:46px;border-radius:50%;background:var(--accent);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dhead-info h2{font-size:15px;font-weight:700}
+.dhead-info p{font-size:11px;color:var(--t2);margin-top:2px}
+.close-btn{margin-left:auto;width:30px;height:30px;border-radius:50%;border:0.5px solid var(--border);background:transparent;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t2);flex-shrink:0}
+.close-btn:hover{background:var(--page)}
+.dpanel-body{padding:22px}
+.mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:22px}
+.mini-card{border-radius:10px;padding:11px;text-align:center}
+.mini-num{font-size:20px;font-weight:700}
+.mini-lbl{font-size:10px;font-weight:500;margin-top:2px}
+.cal-title{font-size:13px;font-weight:600;margin-bottom:10px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:10px}
+.cal-dow{text-align:center;font-size:9px;font-weight:600;color:var(--t2);text-transform:uppercase;padding:3px 0}
+.cal-cell{border-radius:6px;padding:5px 2px;text-align:center;font-size:10px;font-weight:500;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;cursor:default}
+.cal-cell .cdate{font-size:11px;font-weight:600}
+.cal-cell .cst{font-size:8px;margin-top:1px;opacity:.8}
+.cal-cell[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:#1A1A1A;color:#fff;font-size:10px;padding:5px 9px;border-radius:6px;white-space:nowrap;z-index:999;pointer-events:none;line-height:1.5}
+.cal-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:20px}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--t2)}
+.leg-dot{width:9px;height:9px;border-radius:3px}
+.daily-log table{font-size:11px}
+.daily-log thead th{font-size:9px;padding:7px 9px}
+.daily-log tbody td{padding:6px 9px}
+.daily-log tbody tr:nth-child(even){background:var(--page)}
+.det-nav{display:flex;justify-content:space-between;margin-top:20px;padding-top:14px;border-top:0.5px solid var(--border)}
+
+/* ── DEPT SUMMARY TABLE (print) ── */
+.dept-summary-print{display:none}
+
+/* ── PRINT ── */
+@media print{
+  .no-print{display:none!important}
+  #view-detail{display:none!important}
+  body{background:#fff}
+  .topbar{position:static}
+  .dash-body{display:block;padding:12px}
+  .dash-side{display:none}
+  .metric-grid{grid-template-columns:repeat(4,1fr);margin-bottom:14px}
+  .card{box-shadow:none;border:1px solid #ccc}
+  table{font-size:11px}
+  thead th{font-size:9px;padding:6px 10px}
+  tbody td{padding:6px 10px}
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1060px){
+  .dash-body{grid-template-columns:1fr}
+  .dash-side{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .dash-side .side-card{margin-bottom:0}
+}
+@media(max-width:768px){
+  .metric-grid{grid-template-columns:1fr 1fr}
+  .dash-side{grid-template-columns:1fr}
+  .mini-grid{grid-template-columns:repeat(2,1fr)}
+  .helpers{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .upload-card{padding:24px}
+  #searchInput{min-width:120px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ UPLOAD ═══════════════ -->
+<div id="view-upload" class="view active">
+  <div class="upload-card">
+    <div class="brand-logo">KI</div>
+    <h1>KARIKA INDIA | THE SHOP</h1>
+    <p class="sub">Employee Attendance Dashboard &nbsp;·&nbsp; Upload your ET Track export to begin</p>
+
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-icon">📂</div>
+      <p>Drop your attendance file here</p>
+      <small>Accepts .csv and .xlsx exports from ET Track</small>
+      <br><br>
+      <button class="btn btn-outline" onclick="document.getElementById('fileInput').click()">Browse Files</button>
+      <input type="file" id="fileInput" accept=".pdf,.csv,.xlsx,.xls">
+      <div style="margin-top:10px;font-size:11px;color:var(--t2)">📄 PDF &nbsp;·&nbsp; 📊 Excel &nbsp;·&nbsp; 📋 CSV</div>
+    </div>
+
+    <div class="helpers">
+      <div class="helper-box">
+        <label>Report Month</label>
+        <select id="monthSel">
+          <option value="1">January</option><option value="2">February</option>
+          <option value="3" selected>March</option><option value="4">April</option>
+          <option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option>
+          <option value="9">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+      </div>
+      <div class="helper-box">
+        <label>Year</label>
+        <input type="number" id="yearInp" value="2026" min="2020" max="2035">
+      </div>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:10px" onclick="loadSample()">
+      ▶&nbsp; Load Sample Data &nbsp;(35 employees · 15 departments)
+    </button>
+
+    <div class="privacy">🔒 Data is processed entirely in your browser — never sent to any server.</div>
+  </div>
+</div>
+
+<!-- ═══════════════ DASHBOARD ═══════════════ -->
+<div id="view-dashboard" class="view">
+  <div class="topbar no-print">
+    <div class="topbar-brand">
+      <h1>KARIKA INDIA | THE SHOP</h1>
+      <p id="rptLabel">Attendance Report — March 2026</p>
+    </div>
+    <div class="topbar-controls">
+      <select id="deptFil" onchange="applyFilters()"><option value="all">All Departments</option></select>
+      <input type="text" id="searchInput" placeholder="Search name or code…" oninput="applyFilters()">
+      <button class="toggle-btn" id="excBtn" onclick="toggleExc()">Exceptions Only</button>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-outline no-print" onclick="window.print()">🖨&nbsp;Print</button>
+      <button class="btn btn-outline no-print" onclick="showView('upload')">↩&nbsp;New File</button>
+    </div>
+  </div>
+
+  <div class="dash-body">
+    <!-- MAIN -->
+    <div class="dash-main">
+      <div class="metric-grid" id="metricGrid"></div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Employees</h2>
+          <span class="cnt" id="tblCount"></span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th onclick="sortBy('name')">Name <span id="s-name"></span></th>
+              <th onclick="sortBy('department')">Department <span id="s-department"></span></th>
+              <th onclick="sortBy('dayWorked')">Present <span id="s-dayWorked"></span></th>
+              <th onclick="sortBy('absent')">Absent <span id="s-absent"></span></th>
+              <th onclick="sortBy('lateDaysCount')">Late Days <span id="s-lateDaysCount"></span></th>
+              <th onclick="sortBy('totalOTHours')">OT Hrs <span id="s-totalOTHours"></span></th>
+              <th onclick="sortBy('statusBadge')">Status <span id="s-statusBadge"></span></th>
+            </tr></thead>
+            <tbody id="empBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDE -->
+    <div class="dash-side no-print">
+      <div class="side-card">
+        <div class="side-head">Attendance % by Department</div>
+        <div class="side-body" style="padding:12px">
+          <div class="chart-wrap" id="chartWrap">
+            <canvas id="deptChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="side-card">
+        <div class="side-head">Exceptions This Month</div>
+        <div class="side-body" style="padding:0 14px" id="alertPanel"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ LOADING OVERLAY ═══════════════ -->
+<div id="loadOverlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,0.92);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+  <div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite"></div>
+  <div id="loadMsg" style="font-size:14px;font-weight:500;color:var(--t1)">Reading PDF…</div>
+  <div id="loadSub" style="font-size:12px;color:var(--t2)"></div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<!-- ═══════════════ EMPLOYEE DETAIL ═══════════════ -->
+<div id="view-detail">
+  <div class="backdrop" onclick="closeDetail()"></div>
+  <div class="detail-panel">
+    <div class="dpanel-head">
+      <div class="avatar" id="dAvatar"></div>
+      <div class="dhead-info">
+        <h2 id="dName"></h2>
+        <p id="dMeta"></p>
+      </div>
+      <button class="close-btn" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="dpanel-body">
+      <div class="mini-grid" id="miniGrid"></div>
+      <div class="cal-title" id="calTitle"></div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend" id="calLeg"></div>
+      <div class="daily-log">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px">Daily Log</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Day</th><th>In</th><th>Out</th>
+              <th>Hrs</th><th>Late</th><th>OT</th><th>Status</th>
+            </tr></thead>
+            <tbody id="dailyBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="det-nav no-print">
+        <button class="btn btn-outline" id="prevBtn" onclick="navEmp(-1)">← Prev Employee</button>
+        <button class="btn btn-outline" id="nextBtn" onclick="navEmp(1)">Next Employee →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONFIG — change thresholds here
+// ═══════════════════════════════════════════════════════
+const RULES = {
+  highAbsenceDays:    5,
+  repeatedLateDays:   4,
+  excessiveOTHours:  40,
+  missingPunchMin:    1
+};
+
+const MONTHS = ['','January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ═══════════════════════════════════════════════════════
+//  APP STATE
+// ═══════════════════════════════════════════════════════
+const S = {
+  employees: [], filtered: [],
+  sort: { field:'name', dir:'asc' },
+  filters: { dept:'all', search:'', exc:false },
+  selIdx: null, month:3, year:2026, chart:null
+};
+
+// ═══════════════════════════════════════════════════════
+//  RAW SAMPLE DATA  (real employees from ET Track PDF)
+//  [code, card, name, designation, department,
+//   daysWorked, weekOffs, absent, earnedLeave, holidays,
+//   totalOT, lateDaysCount, paidDays]
+// ═══════════════════════════════════════════════════════
+const RAW = [
+  // DYEING
+  ['B309','1139','MOHAN SINGH','MASTER','DYEING',23,5,1,1,2,2.59,6,30],
+  ['B352','1177','DEN BANDHU TIWARI','SUPERVISOR','TIE & DIE',21.5,5,2,2.5,2,32.84,2,28.5],
+  // PRINTING
+  ['B459','1276','SURAYA KANT MISHRA','MASTER','PRINTING',23,5,1,1,2,33.41,1,30],
+  ['B514','1333','RAJDEV','MASTER','PRINTING',23,5,1,1,2,12.05,1,30],
+  // SCREEN (CAD)
+  ['B180','1040','SANTOSH KUMAR','EXECUTIVE - SCREEN MAKING','SCREEN (CAD)',22,5,2,2,2,24.34,12,29],
+  ['B518','1337','RAKESH','ASSISTANT','SCREEN (CAD)',13,4,13,0,1,9.02,1,18],
+  // FABRIC & STORE
+  ['B358','1183','NITIN KUMAR MITTAL','MANAGER','STORE',24,5,0,0,2,39.49,0,31],
+  ['B473','1289','ASHOK KUMAR DESWAL','MANAGER','FABRIC',24,5,0,0,2,20.41,5,31],
+  ['B480','1299','RAJEEV RANJAN SINGH','CHASER','FABRIC',22,5,2,0,2,32.15,3,29],
+  // PRODUCTION
+  ['B100','1021','MAHESH CHANDER JOSHI','ASSISTANT MANAGER','PRODUCTION',23.5,5,0.5,0,2,67.02,3,30.5],
+  ['B357','1182','DEV SINGH','QUALITY ASSISTANT','PRODUCTION',11,4,14,14,2,28.08,2,17],
+  ['B369','1194','MUNNA SINGH RAWAT','FINISHING INCHARGE','PRODUCTION',24,5,0,0,2,69.51,1,31],
+  // SHOP RETAIL & WARE HOUSE
+  ['B142','1032','ARCHANA GIRI','GMT CHECK SUPERVISOR','SHOP RETAIL & WARE HOUSE',23,5,1,0,2,50.31,13,30],
+  ['B463','1280','VITUOPHRENO SELETSO','ASSISTANT','SHOP RETAIL & WARE HOUSE',21,5,3,3,2,40.57,2,28],
+  ['B523','1341','PAWAN KUMAR','EXECUTIVE','SHOP RETAIL & WARE HOUSE',14,4,11,0,2,18.03,4,20],
+  // PURCHASE
+  ['B376','1201','SHIV PRAKASH SINGH','MANAGER','PURCHASE',22.5,5,1.5,1.5,2,11.17,8,29.5],
+  ['B416','1235','VINAY KUMAR SINGH CHAUHAN','EXECUTIVE','PURCHASE',21,5,3,3,2,31.54,7,28],
+  // SAMPLING
+  ['B160','1036','RAVENDRA SINGH','MASTER','SAMPLING',22,5,2,2,2,26.46,2,29],
+  ['B389','1239','SHEELA VERMA','SUPERVISOR','SAMPLING',19,4,7,7,1,28.23,7,24],
+  // HR & ADMIN
+  ['B229','2003','PREM PRAKASH BHARDWAJ','MANAGER','HR & ADMIN',23.5,5,0.5,0,2,70.54,2,30.5],
+  ['B524','1342','KANTI PRASAD GUPTA','GENERAL MANAGER','HR & ADMIN',24,5,0,0,2,19.54,6,31],
+  // MERCHANDISING
+  ['B159','1035','RUCHI TYAGI','MERCHANDISER','MERCHANDISING',21.5,5,2.5,0,2,0,2,28.5],
+  ['B247','1092','RAUSHAN KUMAR','MERCHANDISER','MERCHANDISING',22.5,5,1.5,1.5,2,37.45,8,29.5],
+  ['B494','1313','SHRIKANT KUMAR SANT','ASST. MERCHANT','MERCHANDISING',15,4,10,10,2,34.26,4,21],
+  // DESIGNING
+  ['B374','1199','DEEPA RAJU','DESIGNER','DESIGNING',22.5,5,1.5,0,2,4.17,8,29.5],
+  ['B529','1347','DIVYA RAJU','DESIGNER','DESIGNING',3,2,26,0,0,0.55,1,5],
+  // E-COM
+  ['B500','1319','VIKAS KUMAR','SR. EXECUTIVE','E-COM',21,5,3,3,2,21.44,7,28],
+  ['B502','1321','RAKESH','SR. EXECUTIVE','E-COM',23,5,1,1,2,9.33,4,30],
+  // EDP
+  ['B286','2108','KAVITA','ASSTT. EDP','EDP',20,5,4,4,2,3.12,5,27],
+  ['B526','1344','DEEPAK ROHILLA','IT MANAGER','EDP',23,4,2,2,2,4.23,2,29],
+  // EXPORT & DOCUMENTATION
+  ['B236','1083','VARUN KUMAR SINGH','EXECUTIVE','EXPORT & DOCUMENTATION',24,5,0,0,2,6.38,4,31],
+  ['B243','1089','BHAWAN KUMAR JHA','ACCOUNTS ASSISTANT','EXPORT & DOCUMENTATION',23,5,1,1,2,10.01,2,30],
+  // ACCOUNTS
+  ['B418','1241','KAJAL SHARMA','ACCOUNTS ASSISTANT','ACCOUNTS',15,5,9,9,2,13.19,5,22],
+  ['B481','1300','RANJAN SINGHA','SR. MANAGER ACCOUNTS','ACCOUNTS',12,4,14,14,1,23.31,5,17],
+  ['B507','1326','ROHIT SHANDILYA','MANAGER','ACCOUNTS',23.5,5,0.5,0,2,18.51,2,30.5],
+];
+
+// ═══════════════════════════════════════════════════════
+//  DAY GENERATOR  — creates plausible daily records
+//  from monthly summary data
+// ═══════════════════════════════════════════════════════
+function generateDays(code, daysWorked, weekOffs, absentDays, elDays, holidays, totalOT, lateDaysCnt, month, year) {
+  const dim = new Date(year, month, 0).getDate();
+
+  // March 2026: day1=Sun. WOs: 1,8,15,22,29. Holidays: 4,21
+  const woSet  = new Set([1,8,15,22,29]);
+  const holSet = new Set([4,21]);
+
+  if (weekOffs < 5) woSet.delete(29);
+  if (weekOffs < 4) woSet.delete(22);
+  if (holidays < 2) holSet.delete(21);
+  if (holidays < 1) holSet.delete(4);
+
+  // Working day pool
+  const pool = [];
+  for (let d = 1; d <= dim; d++) {
+    if (!woSet.has(d) && !holSet.has(d)) pool.push(d);
+  }
+
+  // Seeded pseudo-random (deterministic per employee)
+  let seed = code.split('').reduce((a,c) => a + c.charCodeAt(0)*31, 7);
+  const rnd = (n) => { seed = ((seed * 1664525) + 1013904223) >>> 0; return seed % n; };
+  const shuffle = (a) => { for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]} return a; };
+
+  const absent = new Set(shuffle([...pool]).slice(0, Math.min(Math.round(absentDays), pool.length)));
+  const pPool  = pool.filter(d => !absent.has(d));
+  const leaves = new Set(shuffle(pPool.filter(d=>!absent.has(d))).slice(0, Math.min(Math.round(elDays), pPool.length)));
+  const ppPool = pPool.filter(d => !leaves.has(d));
+  const lateDays = new Set(shuffle([...ppPool]).slice(0, Math.min(lateDaysCnt, ppPool.length)));
+  const otPerDay = ppPool.length > 0 ? totalOT / ppPool.length : 0;
+
+  const days = [];
+  for (let d = 1; d <= dim; d++) {
+    const dow = new Date(year, month-1, d).getDay();
+    let status, inT=null, outT=null, wrkH=0, lateM=0, otH=0;
+
+    if (woSet.has(d))   { status='W-W'; }
+    else if (holSet.has(d)) { status='H-H'; }
+    else if (absent.has(d)) { status='A-A'; }
+    else if (leaves.has(d)) { status='E-L'; inT=null; outT=null; }
+    else {
+      // Present
+      const lateAmt = lateDays.has(d) ? (0.08 + rnd(35)/100) : 0;
+      const earlyAmt = lateAmt === 0 ? rnd(8)/100 : 0;
+      inT  = 9.5 + lateAmt - earlyAmt;
+      const dayOT = otPerDay > 0 ? Math.min(otPerDay, 2.5) : 0;
+      outT = 18.5 + dayOT + rnd(6)/100;
+      wrkH = parseFloat((outT - inT).toFixed(2));
+      lateM = Math.round(lateAmt * 60);
+      otH   = parseFloat(Math.max(0, outT - 18.5).toFixed(2));
+      status = lateAmt > 0 ? 'P-P' : 'P-P';
+    }
+
+    days.push({
+      date: d,
+      dayOfWeek: DAYS[dow],
+      inTime:  inT  ? toHHMM(inT)  : null,
+      outTime: outT ? toHHMM(outT) : null,
+      workingHrs: wrkH,
+      lateMinutes: lateM,
+      otHours: otH,
+      status
+    });
+  }
+  return days;
+}
+
+function toHHMM(dec) {
+  const h = Math.floor(dec), m = Math.round((dec - h) * 60);
+  return `${String(h).padStart(2,'0')}:${String(m<60?m:59).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  BUILD EMPLOYEES FROM RAW
+// ═══════════════════════════════════════════════════════
+function buildEmployees(month, year) {
+  return RAW.map(r => {
+    const [code,card,name,desig,dept,dw,wo,ab,el,hol,ot,lcd,pd] = r;
+    const days = generateDays(code, dw, wo, ab, el, hol, ot, lcd, month, year);
+    return derive({
+      code, cardNo:card, name, designation:desig, department:dept, month, year, days,
+      summary:{ dayWorked:dw, weekOffs:wo, absent:ab, earnedLeave:el,
+                holidays:hol, totalOTHours:ot, paidDays:pd }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  DERIVED FIELDS
+// ═══════════════════════════════════════════════════════
+function derive(emp) {
+  const {dayWorked,absent} = emp.summary;
+  const total = dayWorked + absent;
+  emp.attendancePercent = total > 0 ? +((dayWorked/total)*100).toFixed(1) : 0;
+  emp.lateDaysCount   = emp.days.filter(d=>d.lateMinutes>0).length;
+  emp.missingPunchDays= emp.days.filter(d=>(d.inTime&&!d.outTime)||(!d.inTime&&d.outTime)).length;
+  const a=absent, l=emp.lateDaysCount;
+  emp.statusBadge = (a>=5||l>=6)?'alert':(a>=3||l>=4)?'watch':'good';
+  return emp;
+}
+
+// ═══════════════════════════════════════════════════════
+//  ALERTS
+// ═══════════════════════════════════════════════════════
+function makeAlerts(emps) {
+  const out = [];
+  const push = (type,msg,arr) => arr.length && out.push({type,msg,names:arr.map(e=>e.name).slice(0,5),count:arr.length});
+  push('danger',  `${emps.filter(e=>e.summary.absent>=RULES.highAbsenceDays).length} employees absent ${RULES.highAbsenceDays}+ days`,
+       emps.filter(e=>e.summary.absent>=RULES.highAbsenceDays));
+  push('warning', `employees late ${RULES.repeatedLateDays}+ times this month`,
+       emps.filter(e=>e.lateDaysCount>=RULES.repeatedLateDays));
+  push('warning', `employees with missing punch records`,
+       emps.filter(e=>e.missingPunchDays>=RULES.missingPunchMin));
+  push('info',    `employees with ${RULES.excessiveOTHours}+ OT hours`,
+       emps.filter(e=>e.summary.totalOTHours>=RULES.excessiveOTHours));
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════
+//  FILTERS & SORT
+// ═══════════════════════════════════════════════════════
+function applyFilters() {
+  const dept   = document.getElementById('deptFil').value;
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  S.filters = { dept, search, exc: S.filters.exc };
+
+  let res = [...S.employees];
+  if (dept!=='all')  res = res.filter(e=>e.department===dept);
+  if (search)        res = res.filter(e=>e.name.toLowerCase().includes(search)||e.code.toLowerCase().includes(search));
+  if (S.filters.exc) res = res.filter(e=>e.statusBadge!=='good');
+
+  S.filtered = doSort(res, S.sort);
+  renderTable(); renderMetrics();
+  document.getElementById('tblCount').textContent = S.filtered.length + ' employees';
+}
+
+function doSort(arr, cfg) {
+  const order = {good:0,watch:1,alert:2};
+  return [...arr].sort((a,b) => {
+    let va,vb;
+    switch(cfg.field) {
+      case 'name':          va=a.name;          vb=b.name; break;
+      case 'department':    va=a.department;    vb=b.department; break;
+      case 'dayWorked':     va=a.summary.dayWorked;      vb=b.summary.dayWorked; break;
+      case 'absent':        va=a.summary.absent;         vb=b.summary.absent; break;
+      case 'lateDaysCount': va=a.lateDaysCount;          vb=b.lateDaysCount; break;
+      case 'totalOTHours':  va=a.summary.totalOTHours;   vb=b.summary.totalOTHours; break;
+      case 'statusBadge':   va=order[a.statusBadge]||0;  vb=order[b.statusBadge]||0; break;
+      default:              va=a.name; vb=b.name;
+    }
+    if (typeof va==='string') return cfg.dir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
+    return cfg.dir==='asc'?va-vb:vb-va;
+  });
+}
+
+function sortBy(f) {
+  S.sort = S.sort.field===f ? {field:f,dir:S.sort.dir==='asc'?'desc':'asc'} : {field:f,dir:'asc'};
+  applyFilters();
+  ['name','department','dayWorked','absent','lateDaysCount','totalOTHours','statusBadge'].forEach(k=>{
+    const el=document.getElementById('s-'+k);
+    if(el) el.textContent = S.sort.field===k?(S.sort.dir==='asc'?' ▲':' ▼'):'';
+  });
+}
+
+function toggleExc() {
+  S.filters.exc = !S.filters.exc;
+  document.getElementById('excBtn').classList.toggle('active', S.filters.exc);
+  applyFilters();
+}
+
+// ═══════════════════════════════════════════════════════
+//  DEPARTMENT SUMMARY
+// ═══════════════════════════════════════════════════════
+function deptSummary(emps) {
+  const m = {};
+  emps.forEach(e => {
+    if (!m[e.department]) m[e.department]={dept:e.department,list:[]};
+    m[e.department].list.push(e);
+  });
+  return Object.values(m).map(g => ({
+    department:  g.dept,
+    count:       g.list.length,
+    avgAtt:      +(g.list.reduce((s,e)=>s+e.attendancePercent,0)/g.list.length).toFixed(1),
+    totalAbsent: g.list.reduce((s,e)=>s+e.summary.absent,0),
+    totalLate:   g.list.reduce((s,e)=>s+e.lateDaysCount,0),
+    totalOT:     +(g.list.reduce((s,e)=>s+e.summary.totalOTHours,0)).toFixed(1),
+    alerts:      g.list.filter(e=>e.statusBadge==='alert').length
+  })).sort((a,b)=>b.avgAtt-a.avgAtt);
+}
+
+function orgSummary(emps) {
+  const n = emps.length;
+  return {
+    n,
+    avgAtt:      n?+(emps.reduce((s,e)=>s+e.attendancePercent,0)/n).toFixed(1):0,
+    totalAbsent: emps.reduce((s,e)=>s+e.summary.absent,0),
+    totalLate:   emps.reduce((s,e)=>s+e.lateDaysCount,0)
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+//  CELL TYPE & COLORS
+// ═══════════════════════════════════════════════════════
+const CS = {
+  present:{bg:'#EAF3DE',t:'#3B6D11'},
+  absent: {bg:'#FCEBEB',t:'#A32D2D'},
+  late:   {bg:'#FAEEDA',t:'#854F0B'},
+  ot:     {bg:'#E6F1FB',t:'#0C447C'},
+  holiday:{bg:'#EEEDFE',t:'#3C3489'},
+  weekoff:{bg:'#F1EFE8',t:'#5F5E5A'},
+  leave:  {bg:'#E1F5EE',t:'#085041'},
+  empty:  {bg:'transparent',t:'#ccc'}
+};
+
+function cellType(day) {
+  if (!day.status) return 'empty';
+  const s = day.status;
+  if (s.includes('W')) return 'weekoff';
+  if (s.includes('H')) return 'holiday';
+  if (s==='A-A'||s==='A') return 'absent';
+  if (s==='E-L'||s.includes('E')||s.includes('C')||s.includes('S')) return 'leave';
+  if (day.lateMinutes>0) return 'late';
+  if (day.otHours>0) return 'ot';
+  return 'present';
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER — METRICS
+// ═══════════════════════════════════════════════════════
+function renderMetrics() {
+  const o = orgSummary(S.filtered);
+  const ac = o.avgAtt>=90?'green':o.avgAtt>=80?'amber':'red';
+  document.getElementById('metricGrid').innerHTML = `
+    <div class="metric-card blue">
+      <div class="metric-num">${o.n}</div>
+      <div class="metric-lbl">Total Employees</div>
+    </div>
+    <div class="metric-card ${ac}">
+      <div class="metric-num">${o.avgAtt}%</div>
+      <div class="metric-lbl">Avg Attendance</div>
+    </div>
+    <div class="metric-card red">
+      <div class="metric-num">${o.totalAbsent}</div>
+      <div class="metric-lbl">Total Absent Days</div>
+    </div>
+    <div class="metric-card amber">
+      <div class="metric-num">${o.totalLate}</div>
+      <div class="metric-lbl">Total Late Days</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER — TABLE
+// ═══════════════════════════════════════════════════════
+function renderTable() {
+  const tb = document.getElementById('empBody');
+  if (!S.filtered.length) {
+    tb.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--t2)">No employees found</td></tr>`;
+    return;
+  }
+  tb.innerHTML = S.filtered.map(emp => {
+    const idx = S.employees.indexOf(emp);
+    const aClr = emp.summary.absent>0?'color:var(--ca-t);font-weight:600':'';
+    const lClr = emp.lateDaysCount>0?'color:var(--cl-t)':'';
+    return `<tr onclick="openDetail(${idx})">
+      <td><div class="emp-name">${emp.name}</div><div class="emp-sub">${emp.code} · ${emp.designation}</div></td>
+      <td>${emp.department}</td>
+      <td>${emp.summary.dayWorked}</td>
+      <td style="${aClr}">${emp.summary.absent||'—'}</td>
+      <td style="${lClr}">${emp.lateDaysCount||'—'}</td>
+      <td>${emp.summary.totalOTHours>0?emp.summary.totalOTHours.toFixed(1):'—'}</td>
+      <td><span class="badge badge-${emp.statusBadge}">${emp.statusBadge[0].toUpperCase()+emp.statusBadge.slice(1)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER — CHART
+// ═══════════════════════════════════════════════════════
+function renderChart() {
+  const ds = deptSummary(S.employees);
+  const labels = ds.map(d => d.department.length>18 ? d.department.slice(0,16)+'…' : d.department);
+  const vals   = ds.map(d => d.avgAtt);
+  const bgC    = vals.map(v => v>=90?'#EAF3DE':v>=80?'#FAEEDA':'#FCEBEB');
+  const bdC    = vals.map(v => v>=90?'#3B6D11':v>=80?'#854F0B':'#A32D2D');
+
+  const h = Math.max(320, ds.length * 26);
+  const wrap = document.getElementById('chartWrap');
+  wrap.style.height = h + 'px';
+
+  if (S.chart) S.chart.destroy();
+  S.chart = new Chart(document.getElementById('deptChart').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[{ data:vals, backgroundColor:bgC, borderColor:bdC, borderWidth:1.5, borderRadius:4 }] },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw}%`}} },
+      scales:{
+        x:{ min:0,max:100, ticks:{font:{size:9},callback:v=>v+'%'}, grid:{color:'rgba(0,0,0,0.04)'} },
+        y:{ ticks:{font:{size:10}}, grid:{display:false} }
+      },
+      onClick:(e,els) => {
+        if (!els.length) return;
+        document.getElementById('deptFil').value = ds[els[0].index].department;
+        applyFilters();
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER — ALERTS
+// ═══════════════════════════════════════════════════════
+function renderAlerts() {
+  const alerts = makeAlerts(S.employees);
+  const p = document.getElementById('alertPanel');
+  if (!alerts.length) {
+    p.innerHTML='<p style="padding:14px 0;color:var(--t2);font-size:12px">✓ No exceptions this month</p>';
+    return;
+  }
+  p.innerHTML = alerts.map(a=>`
+    <div class="alert-item">
+      <div class="adot ${a.type}"></div>
+      <div>
+        <div class="amsg">${a.count} ${a.msg}</div>
+        <div class="anames">${a.names.join(', ')}${a.count>5?` +${a.count-5} more`:''}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER — EMPLOYEE DETAIL
+// ═══════════════════════════════════════════════════════
+function openDetail(idx) {
+  S.selIdx = idx;
+  renderDetail();
+  document.getElementById('view-detail').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetail() {
+  document.getElementById('view-detail').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function navEmp(dir) {
+  const ni = S.selIdx + dir;
+  if (ni>=0 && ni<S.employees.length) { S.selIdx=ni; renderDetail(); }
+}
+
+function renderDetail() {
+  const emp = S.employees[S.selIdx];
+  if (!emp) return;
+
+  // Header
+  const ini = emp.name.split(' ').slice(0,2).map(w=>w[0]).join('');
+  document.getElementById('dAvatar').textContent = ini;
+  document.getElementById('dName').textContent = emp.name;
+  document.getElementById('dMeta').textContent = `${emp.designation} · ${emp.department} · ${emp.code}  (Card ${emp.cardNo})`;
+
+  // Mini cards
+  document.getElementById('miniGrid').innerHTML = `
+    <div class="mini-card" style="background:var(--cp-bg)">
+      <div class="mini-num" style="color:var(--cp-t)">${emp.summary.dayWorked}</div>
+      <div class="mini-lbl" style="color:var(--cp-t)">Present Days</div>
+    </div>
+    <div class="mini-card" style="background:var(--ca-bg)">
+      <div class="mini-num" style="color:var(--ca-t)">${emp.summary.absent}</div>
+      <div class="mini-lbl" style="color:var(--ca-t)">Absent Days</div>
+    </div>
+    <div class="mini-card" style="background:var(--cl-bg)">
+      <div class="mini-num" style="color:var(--cl-t)">${emp.lateDaysCount}</div>
+      <div class="mini-lbl" style="color:var(--cl-t)">Late Days</div>
+    </div>
+    <div class="mini-card" style="background:var(--co-bg)">
+      <div class="mini-num" style="color:var(--co-t)">${emp.summary.totalOTHours.toFixed(1)}</div>
+      <div class="mini-lbl" style="color:var(--co-t)">OT Hours</div>
+    </div>`;
+
+  // Calendar
+  document.getElementById('calTitle').textContent =
+    `${MONTHS[emp.month]} ${emp.year} — Attendance Calendar`;
+
+  const firstDow = new Date(emp.year, emp.month-1, 1).getDay();
+  let html = DAYS.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for (let i=0;i<firstDow;i++) html+=`<div class="cal-cell" style="background:transparent"></div>`;
+
+  emp.days.forEach(day => {
+    const ct = cellType(day);
+    const cs = CS[ct]||CS.empty;
+    let tip = '';
+    if (day.inTime||day.outTime) {
+      tip = `In: ${day.inTime||'—'} | Out: ${day.outTime||'—'} | Hrs: ${day.workingHrs}`;
+      if (day.lateMinutes>0) tip += ` | Late: ${day.lateMinutes}min`;
+      if (day.otHours>0) tip += ` | OT: ${day.otHours.toFixed(2)}h`;
+    } else if (day.status==='A-A') {
+      tip = 'Absent';
+    } else if (day.status==='H-H') {
+      tip = 'Holiday';
+    } else if (day.status==='W-W') {
+      tip = 'Weekly Off';
+    } else if (day.status==='E-L') {
+      tip = 'Earned Leave';
+    }
+    html += `<div class="cal-cell" style="background:${cs.bg};color:${cs.t}" ${tip?`data-tip="${tip}"`:''}><span class="cdate">${day.date}</span><span class="cst">${day.status||''}</span></div>`;
+  });
+  document.getElementById('calGrid').innerHTML = html;
+
+  // Legend
+  const LEG=[['present','Present'],['absent','Absent'],['late','Late arrival'],
+             ['ot','Overtime'],['holiday','Holiday'],['weekoff','Week Off'],['leave','On Leave']];
+  document.getElementById('calLeg').innerHTML = LEG.map(([t,l])=>{
+    const c=CS[t];
+    return `<div class="leg-item"><div class="leg-dot" style="background:${c.bg};border:1px solid ${c.t}40"></div><span>${l}</span></div>`;
+  }).join('');
+
+  // Daily log — skip week offs and holidays
+  const working = emp.days.filter(d=>d.status!=='W-W'&&d.status!=='H-H');
+  document.getElementById('dailyBody').innerHTML = working.map(d=>{
+    const ct=cellType(d); const cs=CS[ct];
+    return `<tr>
+      <td>${String(d.date).padStart(2,'0')}/${String(emp.month).padStart(2,'0')}</td>
+      <td>${d.dayOfWeek}</td>
+      <td>${d.inTime||'—'}</td>
+      <td>${d.outTime||'—'}</td>
+      <td>${d.workingHrs||'—'}</td>
+      <td>${d.lateMinutes>0?d.lateMinutes+'m':'—'}</td>
+      <td>${d.otHours>0?d.otHours.toFixed(2):'—'}</td>
+      <td><span style="background:${cs.bg};color:${cs.t};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600">${d.status}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('prevBtn').disabled = S.selIdx<=0;
+  document.getElementById('nextBtn').disabled = S.selIdx>=S.employees.length-1;
+}
+
+// ═══════════════════════════════════════════════════════
+//  VIEW MANAGER
+// ═══════════════════════════════════════════════════════
+function showView(v) {
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════
+//  LOAD SAMPLE DATA
+// ═══════════════════════════════════════════════════════
+function loadSample() {
+  S.month = +document.getElementById('monthSel').value;
+  S.year  = +document.getElementById('yearInp').value;
+  S.employees = buildEmployees(S.month, S.year);
+  S.filtered  = [...S.employees];
+  initDash();
+}
+
+function initDash() {
+  document.getElementById('rptLabel').textContent =
+    `Attendance Report — ${MONTHS[S.month]} ${S.year}`;
+
+  // Dept filter options
+  const depts = [...new Set(S.employees.map(e=>e.department))].sort();
+  document.getElementById('deptFil').innerHTML =
+    `<option value="all">All Departments (${depts.length})</option>` +
+    depts.map(d=>`<option value="${d}">${d}</option>`).join('');
+
+  applyFilters();
+  renderAlerts();
+  showView('dashboard');
+  setTimeout(renderChart, 60);
+}
+
+// ═══════════════════════════════════════════════════════
+//  LOADING OVERLAY
+// ═══════════════════════════════════════════════════════
+function showLoad(msg, sub) {
+  const el = document.getElementById('loadOverlay');
+  el.style.display = 'flex';
+  document.getElementById('loadMsg').textContent = msg || 'Processing…';
+  document.getElementById('loadSub').textContent = sub || '';
+}
+function hideLoad() { document.getElementById('loadOverlay').style.display = 'none'; }
+
+// ═══════════════════════════════════════════════════════
+//  FILE UPLOAD — handles PDF, Excel, CSV
+// ═══════════════════════════════════════════════════════
+async function handleFile(file) {
+  S.month = +document.getElementById('monthSel').value;
+  S.year  = +document.getElementById('yearInp').value;
+  const ext = file.name.toLowerCase().split('.').pop();
+
+  showLoad('Reading file…', file.name);
+  try {
+    let parsed = [];
+    if (ext === 'pdf') {
+      parsed = await parsePDF(file);
+    } else if (ext === 'csv') {
+      const csv = await file.text();
+      parsed = parseCSV(csv);
+    } else {
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, {type:'array'});
+      const csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+      parsed = parseCSV(csv);
+    }
+    hideLoad();
+    if (!parsed.length) {
+      alert('Could not extract employee data from this file.\n\nMake sure it is an ET Track attendance export.\nYou can also use "Load Sample Data" to see how the dashboard works.');
+      return;
+    }
+    S.employees = parsed; S.filtered = [...parsed]; initDash();
+  } catch(e) {
+    hideLoad();
+    console.error('File parse error:', e);
+    alert('Error reading file:\n\n' + e.message
+      + '\n\n— If you are opening this file directly from your Desktop, try hosting it on GitHub Pages first, then upload the PDF there.'
+      + '\n— Or use the "Load Sample Data" button to test the dashboard.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  PDF PARSER  — ET Track Employee Time Performance Report
+// ═══════════════════════════════════════════════════════
+async function parsePDF(file) {
+  // PDF.js can expose itself under different globals depending on version/CDN
+  const pdfjs = window.pdfjsLib
+             || window['pdfjs-dist/build/pdf']
+             || window.PDFJS;
+  if (!pdfjs) throw new Error('PDF.js library not available. Please check your internet connection and refresh.');
+
+  // When opened as a local file (file://) the CDN worker is blocked by Chrome.
+  // Setting workerSrc to empty string makes PDF.js run in the main thread instead — slightly
+  // slower but works fine for files this size.
+  if (window.location.protocol === 'file:') {
+    pdfjs.GlobalWorkerOptions.workerSrc = '';
+  } else {
+    pdfjs.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  const ab = await file.arrayBuffer();
+  showLoad('Reading PDF…', 'Opening file…');
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(ab) }).promise;
+  const total = pdf.numPages;
+
+  const allEmps = [];
+  for (let p = 1; p <= total; p++) {
+    showLoad('Analysing PDF…', `Page ${p} of ${total}`);
+    try {
+      const page = await pdf.getPage(p);
+      const tc   = await page.getTextContent();
+      const emps = parseETTrackPage(tc.items);
+      allEmps.push(...emps);
+    } catch (e) {
+      console.warn('Skipping page', p, '—', e.message);
+    }
+  }
+  return allEmps;
+}
+
+// ── Core page parser ──────────────────────────────────
+const RT_SET = new Set(['Shift','Start','End','In','Out','Wrkg.Hrs','Erly.Arvl',
+  'Late','Erly.Dep','Grace/Pnlty','OTHrs','TmLoss','Status','Inm/cid','Outm/cid',
+  'In m/c id','Out m/c id']);
+
+function parseETTrackPage(items) {
+  if (!items || items.length < 10) return [];
+
+  // ── STEP 1: Build raw items with position + width + font size ──
+  const raw = items
+    .map(i => ({
+      str:  i.str,
+      x:    i.transform[4],
+      y:    i.transform[5],
+      w:    i.width || 0,
+      fs:   Math.abs(i.transform[0]) || 8   // font size for gap estimation
+    }))
+    .filter(i => i.str.trim().length > 0);
+
+  // Sort top-to-bottom, left-to-right
+  raw.sort((a, b) => Math.abs(b.y - a.y) > 1 ? b.y - a.y : a.x - b.x);
+
+  // ── STEP 2: Merge characters that belong to the same token ──
+  // ET Track PDFs split every character: "GEN"→"G"+"E"+"N", "9.30"→"9"+".30", "P-P"→"P"+"-"+"P".
+  // We merge adjacent items when the gap between them is within ~1 character width.
+  // IMPORTANT: when item.width = 0 (common in this PDF format), we estimate
+  // the end-of-token X from font size (transform[0]) instead.
+  const merged = [];
+  for (const item of raw) {
+    const s = item.str.trim();
+    if (!s) continue;
+    if (!merged.length) { merged.push({ str: s, x: item.x, y: item.y, w: item.w, fs: item.fs }); continue; }
+    const prev = merged[merged.length - 1];
+    const sameY = Math.abs(item.y - prev.y) <= 4;
+    // Estimate right edge of previous token (use reported width if valid, else font-size estimate)
+    const prevRight = prev.w > 1
+      ? (prev.x + prev.w)
+      : (prev.x + prev.str.length * prev.fs * 0.55);
+    const gap = item.x - prevRight;
+    // Allow gap up to ~1 character width (font_size * 0.8, min 7px)
+    const maxGap = Math.max(prev.fs * 0.8, 7);
+    if (sameY && gap >= -3 && gap <= maxGap) {
+      prev.str += s;
+      prev.w = item.w > 1
+        ? (item.x + item.w) - prev.x
+        : (item.x + item.fs * 0.55 * s.length) - prev.x;
+    } else {
+      merged.push({ str: s, x: item.x, y: item.y, w: item.w, fs: item.fs });
+    }
+  }
+
+  // Clean up merged tokens
+  const pts = merged
+    .map(i => ({ str: i.str.trim(), x: Math.round(i.x), y: Math.round(i.y) }))
+    .filter(i => i.str.length > 0);
+
+  console.log(`PDF page: ${pts.length} tokens after merge (was ${raw.length} raw items). Sample widths:`, items.slice(0,3).map(i => `w=${i.width} fs=${Math.abs(i.transform[0]).toFixed(1)}`));
+
+  // ── STEP 3: Group tokens into visual rows (Y ± 5 tolerance) ──
+  const buckets = {};
+  pts.forEach(i => {
+    const b = Math.round(i.y / 5) * 5;
+    (buckets[b] = buckets[b] || []).push(i);
+  });
+  const rows = Object.values(buckets)
+    .map(r => r.sort((a, b) => a.x - b.x))
+    .sort((a, b) => b[0].y - a[0].y);  // top → bottom
+
+  console.log(`PDF page: ${rows.length} rows`);
+
+  // ── STEP 4: Find day-column X positions ──
+  // Try multiple strategies in order of reliability
+  let dayXMap = null;
+
+  // Strategy A — row that contains integers 1 through 31 (the column header)
+  for (const row of rows) {
+    const hits = new Map();
+    row.forEach(c => {
+      const n = parseInt(c.str);
+      if (!isNaN(n) && n >= 1 && n <= 31 && !hits.has(n)) hits.set(n, c.x);
+    });
+    if (hits.size >= 15) { dayXMap = Object.fromEntries(hits); break; }
+  }
+
+  // Strategy B — the Shift row: most repeated "GEN" tokens
+  if (!dayXMap) {
+    let best = [], bestN = 0;
+    for (const row of rows) {
+      const g = row.filter(c => c.str === 'GEN');
+      if (g.length > bestN) { bestN = g.length; best = g; }
+    }
+    if (bestN >= 15) {
+      dayXMap = {};
+      best.forEach((item, i) => { dayXMap[i + 1] = item.x; });
+      console.log('Strategy B (GEN row): found', bestN, 'columns');
+    }
+  }
+
+  // Strategy C — the Start row: most repeated "9.30" tokens
+  if (!dayXMap) {
+    let best = [], bestN = 0;
+    for (const row of rows) {
+      const g = row.filter(c => c.str === '9.30' || c.str === '9:30' || c.str === '09:30');
+      if (g.length > bestN) { bestN = g.length; best = g; }
+    }
+    if (bestN >= 10) {
+      dayXMap = {};
+      best.forEach((item, i) => { dayXMap[i + 1] = item.x; });
+      console.log('Strategy C (Start row): found', bestN, 'columns');
+    }
+  }
+
+  // Strategy D — the End row: most repeated "18.30" tokens
+  if (!dayXMap) {
+    let best = [], bestN = 0;
+    for (const row of rows) {
+      const g = row.filter(c => c.str === '18.30' || c.str === '18:30');
+      if (g.length > bestN) { bestN = g.length; best = g; }
+    }
+    if (bestN >= 10) {
+      dayXMap = {};
+      best.forEach((item, i) => { dayXMap[i + 1] = item.x; });
+      console.log('Strategy D (End row): found', bestN, 'columns');
+    }
+  }
+
+  // Strategy E — Status row: most repeated P-P / W-W / H-H / A-A patterns
+  if (!dayXMap) {
+    const STATUS_PAT = /^(P-P|W-W|H-H|A-A|P-A|A-P|P-H|W-P|E-L|PP|WW|HH|AA|AP|PA|MP)$/;
+    let best = [], bestN = 0;
+    for (const row of rows) {
+      const g = row.filter(c => STATUS_PAT.test(c.str));
+      if (g.length > bestN) { bestN = g.length; best = g; }
+    }
+    if (bestN >= 10) {
+      dayXMap = {};
+      best.forEach((item, i) => { dayXMap[i + 1] = item.x; });
+      console.log('Strategy E (Status row): found', bestN, 'columns');
+    }
+  }
+
+  if (!dayXMap || Object.keys(dayXMap).length < 8) {
+    // Log sample tokens to help debug
+    console.warn('Could not detect day columns. Sample tokens from this page:');
+    console.warn(pts.slice(0, 60).map(p => `"${p.str}"`).join(', '));
+    return [];
+  }
+
+  // Build sorted column list
+  const dayColumns = Object.entries(dayXMap)
+    .map(([d, x]) => ({ day: +d, x: +x }))
+    .sort((a, b) => a.x - b.x);
+
+  const colW   = dayColumns.length > 1
+    ? (dayColumns[dayColumns.length-1].x - dayColumns[0].x) / (dayColumns.length - 1)
+    : 20;
+  const firstX = dayColumns[0].x;
+  const lastX  = dayColumns[dayColumns.length - 1].x;
+
+  function xToDay(x) {
+    if (x < firstX - colW * 0.8 || x > lastX + colW * 0.8) return null;
+    let best = null, bd = Infinity;
+    for (const c of dayColumns) {
+      const d = Math.abs(c.x - x);
+      if (d < bd) { bd = d; best = c.day; }
+    }
+    return bd <= colW * 0.75 ? best : null;
+  }
+
+  // ── STEP 5: Parse employee blocks ──
+  const employees = [];
+  let emp = null, rowData = {}, sumData = {};
+
+  for (const row of rows) {
+    const strs = row.map(c => c.str).filter(s => s);
+    if (!strs.length) continue;
+
+    // New employee: first token = serial no., second = employee code (B309, C1956…)
+    const isNew = /^\d{1,3}$/.test(strs[0]) &&
+                  /^[A-Z]\d{3,4}$/.test(strs[1] || '');
+
+    if (isNew) {
+      if (emp) employees.push(buildEmployee(emp, rowData, sumData));
+      emp = { code: strs[1], cardNo: strs[2] || '', name: '', designation: '', department: '' };
+      rowData = {}; sumData = {};
+
+      const rtIdx = strs.findIndex(t => RT_SET.has(t));
+      if (rtIdx > 2) {
+        emp.name = strs.slice(3, rtIdx).join(' ').trim();
+        rowData[strs[rtIdx]] = extractDayVals(row, xToDay, lastX);
+        Object.assign(sumData, extractSumVals(row, lastX));
+      } else {
+        emp.name = strs.slice(3).join(' ').trim();
+      }
+      continue;
+    }
+
+    if (!emp) continue;
+
+    const lbl = strs.find(t => RT_SET.has(t));
+    if (lbl) {
+      rowData[lbl] = extractDayVals(row, xToDay, lastX);
+      Object.assign(sumData, extractSumVals(row, lastX));
+      // Text before the label = designation or department
+      const li = strs.indexOf(lbl);
+      const before = strs.slice(0, li).filter(t => /[A-Za-z]/.test(t) && t.length > 1);
+      if (before.length) {
+        if (!emp.designation)      emp.designation  = before.join(' ');
+        else if (!emp.department)  emp.department   = before.join(' ');
+      }
+    } else {
+      // Text-only row → designation / department
+      const words = strs.filter(t => /[A-Za-z]/.test(t) && t.length > 1 && !RT_SET.has(t));
+      if (words.length) {
+        if (!emp.designation)      emp.designation  = words.join(' ');
+        else if (!emp.department)  emp.department   = words.join(' ');
+      }
+    }
+  }
+
+  if (emp) employees.push(buildEmployee(emp, rowData, sumData));
+  console.log(`PDF page: found ${employees.length} employees`);
+  return employees;
+}
+
+// Extract day values using X-position mapping
+function extractDayVals(row, xToDay, lastX) {
+  const out = {};
+  row.forEach(item => {
+    if (RT_SET.has(item.str) || item.x > lastX + 20) return;
+    const d = xToDay(item.x);
+    if (d !== null) out[d] = item.str;
+  });
+  return out;
+}
+
+// Extract right-side summary values (DayWrk, WO, Absent…)
+function extractSumVals(row, lastX) {
+  const out = {};
+  const right = row.filter(i => i.x > lastX + 10);
+  for (let i = 0; i < right.length; i++) {
+    const key = right[i].str.replace(/[\.\s]/g, '').toLowerCase();
+    const val = parseFloat((right[i + 1] || {}).str);
+    if (!isNaN(val)) out[key] = val;
+  }
+  return out;
+}
+
+// Assemble final employee object
+function buildEmployee(meta, rowData, sum) {
+  const inR  = rowData['In']       || {};
+  const outR = rowData['Out']      || {};
+  const stR  = rowData['Status']   || {};
+  const laR  = rowData['Late']     || {};
+  const otR  = rowData['OTHrs']    || {};
+  const wkR  = rowData['Wrkg.Hrs'] || {};
+
+  const dim = new Date(S.year, S.month, 0).getDate();
+  const days = [];
+
+  for (let d = 1; d <= dim; d++) {
+    const dow  = new Date(S.year, S.month-1, d).getDay();
+    const inT  = (inR[d]  || '').toString().trim();
+    const outT = (outR[d] || '').toString().trim();
+    const st   = (stR[d]  || '').toString().trim();
+    const late = parseFloat(laR[d]) || 0;
+    const ot   = parseFloat(otR[d]) || 0;
+    const wrk  = parseFloat(wkR[d]) || 0;
+    days.push({
+      date: d, dayOfWeek: DAYS[dow],
+      inTime:      inT  || null,
+      outTime:     outT || null,
+      workingHrs:  wrk,
+      lateMinutes: Math.round(late * 60),
+      otHours:     ot,
+      status:      st || ''
+    });
+  }
+
+  const dw = sum['daywrk'] || sum['daywork'] || 0;
+  const wo = sum['wo']     || 0;
+  const ab = sum['absent'] || days.filter(d => d.status === 'A-A' || d.status === 'A').length;
+  const el = sum['el']     || 0;
+  const ot = sum['othrs']  || +days.reduce((s,d)=>s+d.otHours,0).toFixed(2);
+  const pd = sum['pddays'] || sum['paiddays'] || 0;
+
+  return derive({
+    code: meta.code, cardNo: meta.cardNo,
+    name:        meta.name        || meta.code,
+    designation: meta.designation || '',
+    department:  meta.department  || '',
+    month: S.month, year: S.year, days,
+    summary: {
+      dayWorked: dw, weekOffs: wo, absent: ab, earnedLeave: el,
+      holidays: sum['holiday'] || 0,
+      totalOTHours: +ot.toFixed(2), paidDays: pd
+    }
+  });
+}
+
+// ET Track wide-format CSV parser
+// Column headers are configurable in CSV_HDR below
+const CSV_HDR = {
+  empCode:'Emp Cd', cardNo:'P.Card No', rowType:'Date',
+  inRow:'In', outRow:'Out', statusRow:'Status',
+  lateRow:'Late', otRow:'OTHrs', wrkRow:'Wrkg.Hrs'
+};
+
+function parseCSV(csvStr) {
+  const {data:rows} = Papa.parse(csvStr, {skipEmptyLines:true});
+  if (!rows||rows.length<3) return [];
+  const emps=[]; let i=0;
+
+  while (i<rows.length) {
+    const r=rows[i];
+    const code=(r[1]||'').toString().trim();
+    if (!code||code===CSV_HDR.empCode||!/^[A-Z]\d{3,4}/.test(code)) {i++;continue;}
+
+    const name=(r[3]||'').toString().split('\n')[0].trim();
+    const card=(r[2]||'').toString().trim();
+    i++;
+    const empRows={};
+    for (let x=0;x<18&&i<rows.length;x++,i++) {
+      const row=rows[i];
+      const rt=(row[4]||row[3]||'').toString().trim();
+      if (!rt && (row[1]||'').toString().trim()) break;
+      if (rt) empRows[rt]=row;
+    }
+
+    const inR=empRows[CSV_HDR.inRow]||[];
+    const outR=empRows[CSV_HDR.outRow]||[];
+    const stR=empRows[CSV_HDR.statusRow]||[];
+    const laR=empRows[CSV_HDR.lateRow]||[];
+    const otR=empRows[CSV_HDR.otRow]||[];
+    const wR=empRows[CSV_HDR.wrkRow]||[];
+
+    const dim=new Date(S.year,S.month,0).getDate();
+    const days=[];
+    for (let d=0;d<dim;d++) {
+      const c=d+5;
+      days.push({
+        date:d+1, dayOfWeek:DAYS[new Date(S.year,S.month-1,d+1).getDay()],
+        inTime:(inR[c]||'').toString().trim()||null,
+        outTime:(outR[c]||'').toString().trim()||null,
+        workingHrs:parseFloat(wR[c])||0,
+        lateMinutes:(parseFloat(laR[c])||0)*60,
+        otHours:parseFloat(otR[c])||0,
+        status:(stR[c]||'').toString().trim()
+      });
+    }
+
+    emps.push(derive({
+      code,cardNo:card,name,designation:'',department:'',month:S.month,year:S.year,days,
+      summary:{
+        dayWorked:days.filter(d=>d.status&&d.status.includes('P')).length,
+        weekOffs:days.filter(d=>d.status&&d.status.includes('W')).length,
+        absent:days.filter(d=>d.status==='A-A'||d.status==='A').length,
+        earnedLeave:0, holidays:0,
+        totalOTHours:+days.reduce((s,d)=>s+d.otHours,0).toFixed(2),
+        paidDays:0
+      }
+    }));
+  }
+  return emps;
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAG & DROP + FILE INPUT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const dz=document.getElementById('dropZone');
+  const fi=document.getElementById('fileInput');
+  dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('drag-over')});
+  dz.addEventListener('dragleave', ()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e=>{
+    e.preventDefault(); dz.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fi.addEventListener('change', e=>{if(e.target.files[0]) handleFile(e.target.files[0])});
+});
+</script>
+</body>
+</html>
